@@ -117,10 +117,8 @@ def push_to_sqs(location, cuisine, dining_time, num_people, email):
     }
 
     # send message to SQS queue
-    response = queue.send_message(MessageBody=json.dumps(message_body))
-
-    # return response
-    return response
+    queue.send_message(MessageBody=json.dumps(message_body))
+    print(f"sent message {message_body} to SQS")
 
 
 def push_user_email_to_dynamodb(email, lex_session_id):
@@ -142,5 +140,3 @@ def push_user_email_to_dynamodb(email, lex_session_id):
     )
     
     print(f"DynamoDB response is {response}")
-
-    return response
