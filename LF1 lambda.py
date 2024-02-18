@@ -2,63 +2,89 @@ import json
 import boto3
 
 
-def get_slots(intent_request):
-    return intent_request['currentIntent']['slots']
-
-
 def lambda_handler(event, context):
+    print("Received event:", json.dumps(event))
+    global USER_EMAIL_ADDRESS
+    USER_EMAIL_ADDRESS = 'mj3102@nyu.edu'  # set default email to send to
+    print(f"default user email address {USER_EMAIL_ADDRESS}")
+
     # extract intent and parameters from Lex
-    intent = event["currentIntent"]["name"]
-    slots = event["currentIntent"]["slots"]
+    intent = event["sessionState"]["intent"]["name"]
+    print(f"intent {intent}")
 
     # check which intent was called, and handle it accordingly
     if intent == "GreetingIntent":
-        return handle_greeting_intent()
+        lex_session_id = event['sessionId']
+        print("intent is GreetingIntent")
+        print(f"user sessionId {lex_session_id}")
+        USER_EMAIL_ADDRESS = event["sessionState"]["intent"]['slots']['Email']['value']['interpretedValue']
+        print(f"user session email is {USER_EMAIL_ADDRESS}")
+
+        # Store the user's email in DynamoDB with Lex session ID
+        push_user_email_to_dynamodb(USER_EMAIL_ADDRESS, lex_session_id)
+        print("user email sent to DynamoDB")
+
+        # Return a success response to Lex
+        return {
+            "messages": [
+            {
+              "contentType": "PlainText",
+              "content": USER_EMAIL_ADDRESS
+            }
+          ],
+          "sessionState": {
+            "dialogAction": {
+              "type": "ConfirmIntent",
+            }
+          }
+        }
+
     elif intent == "ThankYouIntent":
         return handle_thank_you_intent()
-    else:
+    elif intent == "DiningSuggestionsIntent":
         # otherwise, it's the DiningSuggestionsIntent
+        print("intent is DiningSuggestionsIntent")
 
         # collect parameters from the user
+        slots = event["proposedNextState"]["intent"]["slots"]
         location = slots['Location']
         cuisine = slots['Cuisine']
         dining_time = slots['DiningTime']
         num_people = slots['NumberOfPeople']
-        user_email = slots['Email']
 
         # push information from user to SQS queue
-        push_to_sqs(location, cuisine, dining_time, num_people, user_email)
+        push_to_sqs(location, cuisine, dining_time, num_people, USER_EMAIL_ADDRESS)
 
         # Confirmation message to the user
-        response_message = "Thank you for providing the information. We will notify you over email once we have restaurant suggestions."
+        response_message = "We have received your request. We will send you an email shortly with our recommendation."
 
         # Return the response to Lex
         
         return {
-            'dialogAction': {
-                'type': 'Close',
-                'fulfillmentState': 'Fulfilled',
-                'message': {
-                    'contentType': 'PlainText',
-                    'content': response_message
-                }
+          "messages": [
+            {
+              "contentType": "PlainText",
+              "content": "We have received your request. We will send you an email shortly with our recommendation."
             }
+          ],
+          "sessionState": {
+            "dialogAction": {
+              "type": "ConfirmIntent",
+              "intent": {
+                "name": "DiningSuggestionsIntent",
+                "state": "Fulfilled",
+                "slots": {
+                  "Location": location,
+                  "Cuisine": cuisine,
+                  "DiningTime": dining_time,
+                  "NumberOfPeople": num_people
+                }
+              }
+            }
+          }
         }
 
 
-def handle_greeting_intent():
-    # receives request for GreetingIntent and composes a response
-    return {
-        "statusCode": 200,
-        "messages": [
-            {
-                "type": "unstructured",
-                "unstructured": {
-                    "text": "Hi there, how can I help?"
-                },
-            }
-        ],
-    }
 
 
 def handle_thank_you_intent():
@@ -76,7 +102,7 @@ def handle_thank_you_intent():
     }
 
 
-def push_to_sqs(location, cuisine, dining_time, num_people, user_email):
+def push_to_sqs(location, cuisine, dining_time, num_people, email):
     # connect to SQS
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName='dining-suggestion-queue')
@@ -87,11 +113,34 @@ def push_to_sqs(location, cuisine, dining_time, num_people, user_email):
         'cuisine': cuisine,
         'dining_time': dining_time,
         'num_people': num_people,
-        'user_email': user_email
+        'email': email
     }
 
     # send message to SQS queue
     response = queue.send_message(MessageBody=json.dumps(message_body))
 
     # return response
+    return response
+
+
+def push_user_email_to_dynamodb(email, lex_session_id):
+    # store the user's email in DynamoDB
+    print(f"pushing email {email} to DynamoDB")
+    print(f"pushing session id {lex_session_id} to DynamoDB")
+
+    dynamodb = boto3.resource('dynamodb')
+    table_name = 'restaurant-bot-user-states'
+
+    table = dynamodb.Table(table_name)
+    print(f"connected to DynamoDB table {table}")
+
+    response = table.put_item(
+        Item={
+            'email': email,
+            'LexSessionId': lex_session_id
+        }
+    )
+    
+    print(f"DynamoDB response is {response}")
+
     return response
