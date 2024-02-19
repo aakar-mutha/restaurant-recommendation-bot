@@ -5,8 +5,8 @@ import boto3
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
     global USER_EMAIL_ADDRESS
-    USER_EMAIL_ADDRESS = 'mj3102@nyu.edu'  # set default email to send to
-    print(f"default user email address {USER_EMAIL_ADDRESS}")
+    USER_EMAIL_ADDRESS = None  # set default email to None
+    print(f"default user email address {USER_EMAIL_ADDRESS}") # should be None
 
     # extract intent, session attributes, and parameters from Lex
     intent = event["sessionState"]["intent"]["name"]
@@ -16,12 +16,18 @@ def lambda_handler(event, context):
 
     # check which intent was called, and handle it accordingly
     if intent == "GreetingIntent":
+        print(f"Starting GreetingIntent, USER_EMAIL_ADDRESS is {USER_EMAIL_ADDRESS}")
         lex_session_id = event['sessionId']
-        print("intent is GreetingIntent")
         print(f"user sessionId {lex_session_id}")
-        USER_EMAIL_ADDRESS = event["sessionState"]["intent"]['slots']['Email']['value']['interpretedValue']
+        slots = event["sessionState"]["intent"]["slots"]
         
-        if event["sessionState"]["intent"]['slots']['Email'] is None:
+        if slots["Email"] is not None and "value" in slots["Email"]:
+            email = slots["Email"]["value"]["interpretedValue"]
+        else:
+            # Handle the case when Email slot or its value is None
+            email = None  # keep email as none, asking user to re-input
+        
+        if email is None or email.strip() == "":
             return {
                 "messages": [
                     {
@@ -30,17 +36,21 @@ def lambda_handler(event, context):
                     }
                 ],
                 "sessionState": {
+                    "dialogAction": {
+                        "type": "ConfirmIntent",
+                    },
                     "intent": {
                         "name": "GreetingIntent",
                         "state": "InProgress"
                     },
                     "sessionAttributes": {
-                        "USER_EMAIL_ADDRESS": USER_EMAIL_ADDRESS
+                        "USER_EMAIL_ADDRESS": None # clear the email in session's attributes
                     }
                 }
             }
             
         else:
+            USER_EMAIL_ADDRESS = email
             print(f"user session email is {USER_EMAIL_ADDRESS}")
     
             # Store the user's email in DynamoDB with Lex session ID
@@ -74,35 +84,28 @@ def lambda_handler(event, context):
                     }
                 }
             }
-
-
     elif intent == "ThankYouIntent":
         return handle_thank_you_intent()
     elif intent == "DiningSuggestionsIntent":
         # otherwise, it's the DiningSuggestionsIntent
         print("intent is DiningSuggestionsIntent")
-        
-        USER_EMAIL_ADDRESS = session_attributes.get("USER_EMAIL_ADDRESS", None)
-        print(f"Getting email address from session attributes {USER_EMAIL_ADDRESS}")
-        
+        USER_EMAIL_ADDRESS = session_attributes["USER_EMAIL_ADDRESS"]
+        print(f"USER_EMAIL_ADDRESS is {USER_EMAIL_ADDRESS}")
+            
         if USER_EMAIL_ADDRESS:
-            # USER_EMAIL_ADDRESS exists, we continue with DiningSuggestionIntent
-        
             # collect parameters from the user
-            slots = event["proposedNextState"]["intent"]["slots"]
+            slots = event["sessionState"]["intent"]["slots"]
             location = slots['Location']
             cuisine = slots['Cuisine']
             dining_time = slots['DiningTime']
             num_people = slots['NumberOfPeople']
     
+            print(f"pushing request to SQS to email {USER_EMAIL_ADDRESS}")
+    
             # push information from user to SQS queue
             push_to_sqs(location, cuisine, dining_time, num_people, USER_EMAIL_ADDRESS)
-    
-            # Confirmation message to the user
-            response_message = "We have received your request. We will send you an email shortly with our recommendation."
-    
+
             # Return the response to Lex
-            
             return {
               "messages": [
                 {
@@ -126,8 +129,9 @@ def lambda_handler(event, context):
                 }
               }
             }
+            
         else:
-            # If the email is not available in session attributes, prompt the user to provide it
+            # If the email isn't available in session attributes, prompt user again
             return {
                 "messages": [
                     {
@@ -140,7 +144,7 @@ def lambda_handler(event, context):
                         "state": "InProgress"
                     },
                     "sessionAttributes": {
-                        "USER_EMAIL_ADDRESS": USER_EMAIL_ADDRESS
+                        "USER_EMAIL_ADDRESS": None # clear session attributes
                     }
                 }
             }
@@ -149,15 +153,21 @@ def lambda_handler(event, context):
 def handle_thank_you_intent():
     # receives request for ThankYouIntent and composes a response
     return {
-        "statusCode": 200,
         "messages": [
             {
-                "type": "unstructured",
-                "unstructured": {
-                    "text": "You're welcome! If you need any more assistance, feel free to ask."
-                },
+                "contentType": "PlainText",
+                "content": "If you need any further assistance, feel free to ask."
             }
         ],
+        "sessionState": {
+            "dialogAction": {
+                "type": "Close"
+            },
+            "intent": {
+                "name": "ThankYouIntent",
+                "state": "Fulfilled"
+            }
+        }
     }
 
 
