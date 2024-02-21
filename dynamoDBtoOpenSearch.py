@@ -1,9 +1,9 @@
-import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+import OpenSearch
 from pprint import pprint
 
-HOST = 'search-cloud-hw-1-43gl3ui4fy5t6aqdiv2ddgoo7a.us-east-1.es.amazonaws.com' # cluster endpoint, for example: my-test-domain.us-east-1.es.amazonaws.com
+HOST = 'search-cloud-hw-1-43gl3ui4fy5t6aqdiv2ddgoo7a.aos.us-east-1.on.aws' # cluster endpoint, for example: my-test-domain.us-east-1.es.amazonaws.com
 REGION = 'us-east-1'
-SERVICE = 'es'
+SERVICE = 'aos'
 # credentials = boto3.Session().get_credentials()
 # auth = AWSV4SignerAuth(credentials, region, service)
 AUTH = ('cloud', 'Cloud-hw1') 

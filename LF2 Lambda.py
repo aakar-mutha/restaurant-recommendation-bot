@@ -1,50 +1,105 @@
 import boto3
-from boto3.dynamodb.conditions import Key
-
-from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
-from pprint import pprint
-
+from botocore.exceptions import ClientError
+import requests
+from opensearchpy import OpenSearch
 import json
-from decimal import Decimal
 
+SENDER = "aakar.mutha@nyu.edu"
+AWS_REGION = "us-east-1"
 
+# The subject line for the email.
+SUBJECT = "Delicious Food awaits you."
 
-host = 'localhost'
-port = 9200
-auth = ('admin','admin')
-# Create the client with SSL/TLS and hostname verification disabled.
+host = 'search-cloud-hw-1-43gl3ui4fy5t6aqdiv2ddgoo7a.aos.us-east-1.on.aws' # cluster endpoint, for example: my-test-domain.us-east-1.es.amazonaws.com
+region = 'us-east-1'
+service = 'aos'
+auth = ('cloud', 'Cloud-hw1') 
 client = OpenSearch(
-    hosts = [{'host': host, 'port': port}],
-    http_auth = auth,
-    http_compress = True, # enables gzip compression for request bodies
-    use_ssl = True,
-    verify_certs = False,
-    ssl_assert_hostname = False,
-    ssl_show_warn = False
-)
+        hosts = [{'host': host, 'port': 443}],
+        http_compress = True, # enables gzip compression for request bodies
+        http_auth = auth,
+        use_ssl = True,
+        verify_certs = True,
+        ssl_assert_hostname = False,
+        ssl_show_warn = False
+    )
 
-
-q = 'Japanese'
-query = {
-  'size': 5,
-  'query': {
-    'multi_match': {
-      'query': q,
-      'fields': ['address', 'name']
+def queryElasticSearch(cuisine):
+    query = {
+        'size': 5,
+        'query': {
+            'multi_match': {
+            'query': cuisine,
+            'fields': ['address', 'name']
+            }
+        },
+        'sort' : {
+            'rating' :{
+                'order' : 'desc'
+            }
+        }
     }
-  },
-  'sort' : {
-      'rating' :{
-          'order' : 'desc'
-      }
-  }
-  
-}
+    response = client.search(
+        body = query,
+        index = 'restaurant-index'
+    )
+    
+    return response['hits']['hits']
 
+def sendEmail(hits,email):
+    message = "Hi, following are the restaurants we recommend according to your recent interaction:\n"
 
-response = client.search(
-    body = query,
-    index = 'restaurant-index'
-)
+    counter = 1
+    for i in hits:
+        data = i['_source']
+        message += f"{counter}. " + data['name'] + " located at " + data['address'] + "\n"
+        counter+=1
 
-pprint(response)
+        message += "Thank you for using RestaurantBot!\nSee you again (:"
+        print(message)
+        
+    CHARSET = "UTF-8"
+
+    # Create a new SES resource and specify a region.
+    client = boto3.client('ses',region_name=AWS_REGION)
+
+    try:
+        #Provide the contents of the email.
+        response = client.send_email(
+            Destination={
+                'ToAddresses': [
+                    email,
+                ],
+            },
+            Message={
+                'Body': {
+                    'Text': {
+                        'Charset': CHARSET,
+                        'Data': message,
+                    },
+                },
+                'Subject': {
+                    'Charset': CHARSET,
+                    'Data': SUBJECT,
+                },
+            },
+            Source=SENDER,
+        )
+    # Display an error if something goes wrong.	
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        print("Email sent! Message ID:"),
+        print(response['MessageId'])
+        
+def lambda_handler(event,context):
+    print(json.dumps(event))
+    records = event.get('Records',None)
+    if(len(records) > 0):
+        for record in records:
+            body = json.loads(record.get('body', None))
+            if(body != None):
+                cuisine = body.get('cuisine', None)
+                email = body.get('email', None)
+                hits = queryElasticSearch(cuisine)
+                sendEmail(hits,email)
