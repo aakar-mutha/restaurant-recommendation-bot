@@ -93,11 +93,27 @@ def sendEmail(hits,email):
         print(response['MessageId'])
         
 def lambda_handler(event,context):
-    print(json.dumps(event))
-    records = event.get('Records',None)
-    if(len(records) > 0):
-        for record in records:
-            body = json.loads(record.get('body', None))
+    sqs_client = boto3.client('sqs')
+
+    # SQS queue URL
+    queue_url = 'https://sqs.us-east-1.amazonaws.com/905418445552/dining-suggestion-queue'
+
+    # Receive messages from the queue
+    response = sqs_client.receive_message(
+        QueueUrl=queue_url,
+        AttributeNames=['All'],
+        MaxNumberOfMessages=1
+    )
+    print(json.dumps(response))
+    messages = response.get('Messages',None)
+    
+    if(messages != None):
+        for message in messages:
+            sqs_client.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=message['ReceiptHandle']
+            )
+            body = json.loads(message.get('Body',None))
             if(body != None):
                 cuisine = body.get('cuisine', None)
                 email = body.get('email', None)
