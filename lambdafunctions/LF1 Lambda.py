@@ -274,195 +274,195 @@ def lambda_handler(event, context=[]):
     return toRet
 
 
-event = {
-    "sessionId": "905418445552116",
-    "inputTranscript": "aakar.mutha@nyu.edu",
-    "interpretations": [
-        {
-            "interpretationSource": "Lex",
-            "nluConfidence": 1,
-            "intent": {
-                "confirmationState": "None",
-                "name": "DiningSuggestionsIntent",
-                "slots": {
-                    "Cuisine": {
-                        "shape": "Scalar",
-                        "value": {
-                            "originalValue": "indian",
-                            "resolvedValues": [
-                                "indian"
-                            ],
-                            "interpretedValue": "indian"
-                        }
-                    },
-                    "NumberOfPeople": {
-                        "shape": "Scalar",
-                        "value": {
-                            "originalValue": "3",
-                            "resolvedValues": [
-                                "3"
-                            ],
-                            "interpretedValue": "3"
-                        }
-                    },
-                    "DiningTime": {
-                        "shape": "Scalar",
-                        "value": {
-                            "originalValue": "3pm",
-                            "resolvedValues": [
-                                "15:00"
-                            ],
-                            "interpretedValue": "15:00"
-                        }
-                    },
-                    "email": {
-                        "shape": "Scalar",
-                        "value": {
-                            "originalValue": "aakar.mutha@nyu.edu",
-                            "resolvedValues": [
-                                "aakar.mutha@nyu.edu"
-                            ],
-                            "interpretedValue": "aakar.mutha@nyu.edu"
-                        }
-                    },
-                    "Location": {
-                        "shape": "Scalar",
-                        "value": {
-                            "originalValue": "new york",
-                            "resolvedValues": [
-                                "new york"
-                            ],
-                            "interpretedValue": "new york"
-                        }
-                    }
-                },
-                "state": "InProgress"
-            }
-        },
-        {
-            "interpretationSource": "Lex",
-            "intent": {
-                "confirmationState": "None",
-                "name": "FallbackIntent",
-                "slots": {},
-                "state": "InProgress"
-            }
-        },
-        {
-            "interpretationSource": "Lex",
-            "nluConfidence": 0.44,
-            "intent": {
-                "confirmationState": "None",
-                "name": "ThankYouIntent",
-                "slots": {},
-                "state": "InProgress"
-            }
-        },
-        {
-            "interpretationSource": "Lex",
-            "nluConfidence": 0.24,
-            "intent": {
-                "confirmationState": "None",
-                "name": "GreetingIntent",
-                "slots": {},
-                "state": "InProgress"
-            }
-        }
-    ],
-    "bot": {
-        "aliasId": "TSTALIASID",
-        "aliasName": "TestBotAlias",
-        "name": "restaurantBot2",
-        "version": "DRAFT",
-        "localeId": "en_US",
-        "id": "V4X2CJY560"
-    },
-    "responseContentType": "text/plain; charset=utf-8",
-    "sessionState": {
-        "originatingRequestId": "8621aeb1-5a00-4f05-8242-1f94345f5d0d",
-        "sessionAttributes": {},
-        "activeContexts": [],
-        "intent": {
-            "confirmationState": "None",
-            "name": "DiningSuggestionsIntent",
-            "slots": {
-                "Cuisine": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "indian",
-                        "resolvedValues": [
-                            "indian"
-                        ],
-                        "interpretedValue": "indian"
-                    }
-                },
-                "NumberOfPeople": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "3",
-                        "resolvedValues": [
-                            "3"
-                        ],
-                        "interpretedValue": "3"
-                    }
-                },
-                "DiningTime": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "3pm",
-                        "resolvedValues": [
-                            "15:00"
-                        ],
-                        "interpretedValue": "15:00"
-                    }
-                },
-                "email": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "aakar.mutha@nyu.edu",
-                        "resolvedValues": [
-                            "aakar.mutha@nyu.edu"
-                        ],
-                        "interpretedValue": "aakar.mutha@nyu.edu"
-                    }
-                },
-                "Location": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "new york",
-                        "resolvedValues": [
-                            "new york"
-                        ],
-                        "interpretedValue": "new york"
-                    }
-                }
-            },
-            "state": "InProgress"
-        }
-    },
-    "messageVersion": "1.0",
-    "invocationSource": "DialogCodeHook",
-    "transcriptions": [
-        {
-            "resolvedContext": {
-                "intent": "DiningSuggestionsIntent"
-            },
-            "resolvedSlots": {
-                "email": {
-                    "shape": "Scalar",
-                    "value": {
-                        "originalValue": "aakar.mutha@nyu.edu",
-                        "resolvedValues": [
-                            "aakar.mutha@nyu.edu"
-                        ]
-                    }
-                }
-            },
-            "transcriptionConfidence": 1,
-            "transcription": "aakar.mutha@nyu.edu"
-        }
-    ],
-    "inputMode": "Text"
-}
+# event = {
+#     "sessionId": "905418445552116",
+#     "inputTranscript": "aakar.mutha@nyu.edu",
+#     "interpretations": [
+#         {
+#             "interpretationSource": "Lex",
+#             "nluConfidence": 1,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "DiningSuggestionsIntent",
+#                 "slots": {
+#                     "Cuisine": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "indian",
+#                             "resolvedValues": [
+#                                 "indian"
+#                             ],
+#                             "interpretedValue": "indian"
+#                         }
+#                     },
+#                     "NumberOfPeople": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "3",
+#                             "resolvedValues": [
+#                                 "3"
+#                             ],
+#                             "interpretedValue": "3"
+#                         }
+#                     },
+#                     "DiningTime": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "3pm",
+#                             "resolvedValues": [
+#                                 "15:00"
+#                             ],
+#                             "interpretedValue": "15:00"
+#                         }
+#                     },
+#                     "email": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "aakar.mutha@nyu.edu",
+#                             "resolvedValues": [
+#                                 "aakar.mutha@nyu.edu"
+#                             ],
+#                             "interpretedValue": "aakar.mutha@nyu.edu"
+#                         }
+#                     },
+#                     "Location": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "new york",
+#                             "resolvedValues": [
+#                                 "new york"
+#                             ],
+#                             "interpretedValue": "new york"
+#                         }
+#                     }
+#                 },
+#                 "state": "InProgress"
+#             }
+#         },
+#         {
+#             "interpretationSource": "Lex",
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "FallbackIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             }
+#         },
+#         {
+#             "interpretationSource": "Lex",
+#             "nluConfidence": 0.44,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "ThankYouIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             }
+#         },
+#         {
+#             "interpretationSource": "Lex",
+#             "nluConfidence": 0.24,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "GreetingIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             }
+#         }
+#     ],
+#     "bot": {
+#         "aliasId": "TSTALIASID",
+#         "aliasName": "TestBotAlias",
+#         "name": "restaurantBot2",
+#         "version": "DRAFT",
+#         "localeId": "en_US",
+#         "id": "V4X2CJY560"
+#     },
+#     "responseContentType": "text/plain; charset=utf-8",
+#     "sessionState": {
+#         "originatingRequestId": "8621aeb1-5a00-4f05-8242-1f94345f5d0d",
+#         "sessionAttributes": {},
+#         "activeContexts": [],
+#         "intent": {
+#             "confirmationState": "None",
+#             "name": "DiningSuggestionsIntent",
+#             "slots": {
+#                 "Cuisine": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "indian",
+#                         "resolvedValues": [
+#                             "indian"
+#                         ],
+#                         "interpretedValue": "indian"
+#                     }
+#                 },
+#                 "NumberOfPeople": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "3",
+#                         "resolvedValues": [
+#                             "3"
+#                         ],
+#                         "interpretedValue": "3"
+#                     }
+#                 },
+#                 "DiningTime": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "3pm",
+#                         "resolvedValues": [
+#                             "15:00"
+#                         ],
+#                         "interpretedValue": "15:00"
+#                     }
+#                 },
+#                 "email": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "aakar.mutha@nyu.edu",
+#                         "resolvedValues": [
+#                             "aakar.mutha@nyu.edu"
+#                         ],
+#                         "interpretedValue": "aakar.mutha@nyu.edu"
+#                     }
+#                 },
+#                 "Location": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "new york",
+#                         "resolvedValues": [
+#                             "new york"
+#                         ],
+#                         "interpretedValue": "new york"
+#                     }
+#                 }
+#             },
+#             "state": "InProgress"
+#         }
+#     },
+#     "messageVersion": "1.0",
+#     "invocationSource": "DialogCodeHook",
+#     "transcriptions": [
+#         {
+#             "resolvedContext": {
+#                 "intent": "DiningSuggestionsIntent"
+#             },
+#             "resolvedSlots": {
+#                 "email": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "aakar.mutha@nyu.edu",
+#                         "resolvedValues": [
+#                             "aakar.mutha@nyu.edu"
+#                         ]
+#                     }
+#                 }
+#             },
+#             "transcriptionConfidence": 1,
+#             "transcription": "aakar.mutha@nyu.edu"
+#         }
+#     ],
+#     "inputMode": "Text"
+# }
 
-print(lambda_handler(event))
+# print(lambda_handler(event))
