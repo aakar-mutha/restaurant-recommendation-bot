@@ -7,6 +7,8 @@ import math
 import os
 import time
 from botocore.vendored import requests
+import re
+EMAILREGEX = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -135,35 +137,16 @@ def push_to_sqs(location, cuisine, dining_time, num_people, email):
     queue.send_message(MessageBody=json.dumps(message_body))
     print(f"sent message {message_body} to SQS")
 
-
-
-
-def greeting_intent(intent_request):
-    return {
-        'dialogAction': {
-            "type": "ElicitIntent",
-            'message': {
-                'contentType': 'PlainText',
-                'content': 'Hi there, how can I help?'}
-        }
-    }
-
-
-def thank_you_intent(intent_request):
-    return {
-        'dialogAction': {
-            "type": "ElicitIntent",
-            'message': {
-                'contentType': 'PlainText',
-                'content': 'You are welcome!'}
-        }
-    }
-
-
-def validate_dining_suggestion(location, cuisine, num_people, time):
-    cuisines = ['italian', 'chinese', 'indian', 'american', 'mexican', 'spanish', 'greek', 'latin', 'Persian']
-    locations = ['new york', 'manhattan','ny']
-    if location is not None and location.lower() not in locations:
+def validate_dining_suggestion(location, cuisine, num_people, time, email):
+    cuisines = ['italian', 'chinese', 'indian', 'greek', 'mexican', 'spanish','american','japanese']
+    locations = ['new york', 'manhattan']
+    
+    if(location is None):
+        return build_validation_result(False,
+                                       "Location",
+                                       "This location is not supported.")
+        
+    elif (location.lower() not in locations):
         return build_validation_result(False,
                                        "Location",
                                        "This location is not supported.")
@@ -192,17 +175,20 @@ def validate_dining_suggestion(location, cuisine, num_people, time):
             # Not a valid time; use a prompt defined on the build-time model.
             return build_validation_result(False, 'DiningTime', 'Not a valid time')
 
-        if hour < 10 or hour > 16:
+        if hour <= 10 or hour >= 21:
             # Outside of business hours
             return build_validation_result(False, 'DiningTime',
-                                           'Our business hours are from ten a m. to five p m. Can you specify a time during this range?')
-
+                                           'Our business hours are from 10 am to 9 pm. Can you please specify a time during this range?')
+    if email is not None:
+        if(not re.fullmatch(EMAILREGEX, email)):
+            build_validation_result(False, 'email', 'Can you please check your email address and try again?')
+    
     return build_validation_result(True, None, None)
 
 
 def get_slot_val(slot,to_get):
     if slot[to_get]:
-        return slot[to_get]['value']['interpretedValue']
+        return slot[to_get]['value'].get('interpretedValue',None)
     return None
 
 def dining_suggestion_intent(intent_request):
@@ -216,9 +202,8 @@ def dining_suggestion_intent(intent_request):
     source = intent_request['invocationSource']
     
     confirmation = intent_request['interpretations'][0]['intent']['confirmationState']
-    if(location == None or cuisine == None or num_people == None or time == None or email == None or confirmation == "None"):
-        validation_result = validate_dining_suggestion(location, cuisine, num_people, time)
-
+    if(location == None or cuisine == None or num_people == None or time == None or email == None or confirmation != "Confirmed"):
+        validation_result = validate_dining_suggestion(location, cuisine, num_people, time, email)   
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionState']['sessionAttributes'],
@@ -233,7 +218,24 @@ def dining_suggestion_intent(intent_request):
             output_session_attributes = {}
             
         return delegate(intent_request['interpretations'][0]['intent']['name'],output_session_attributes, slots)
-    
+    elif(confirmation == "Denied"):
+        return {
+                "sessionState": {
+                    "dialogAction": {
+                        "type": "ElicitIntent"
+                    }
+                },
+                "messages": [
+                    {
+                        "contentType": "PlainText",
+                        "content": "Okay! Lets try again!"
+                    },
+                    {
+                        "contentType": "PlainText",
+                        "content": "How can I help you today?"
+                    }
+                ]
+            }
     else:
         push_to_sqs(location,cuisine, time, num_people, email)
         return {"sessionState": {
@@ -254,12 +256,9 @@ def dining_suggestion_intent(intent_request):
 def dispatch(intent_request):
     intent_name = intent_request['interpretations'][0]['intent']['name']
     logger.debug('dispatch, intentName={}'.format (intent_name))
-    if intent_name == 'GreetingIntent':
-        return greeting_intent(intent_request)
-    elif intent_name == 'DiningSuggestionsIntent':
+    
+    if intent_name == 'DiningSuggestionsIntent':
         return dining_suggestion_intent(intent_request)
-    elif intent_name == 'ThankYouIntent':
-        return thank_you_intent(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
