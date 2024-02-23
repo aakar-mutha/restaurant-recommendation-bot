@@ -91,7 +91,16 @@ def sendEmail(hits,email):
     else:
         print("Email sent! Message ID:"),
         print(response['MessageId'])
-        
+
+
+def saveUserState(body):
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('user-data')
+    response = table.put_item(
+        Item=body
+    )
+    print(response)
+
 def lambda_handler(event,context):
     sqs_client = boto3.client('sqs')
 
@@ -102,7 +111,6 @@ def lambda_handler(event,context):
     response = sqs_client.receive_message(
         QueueUrl=queue_url,
         AttributeNames=['All'],
-        MaxNumberOfMessages=1
     )
     print(json.dumps(response))
     messages = response.get('Messages',None)
@@ -115,6 +123,7 @@ def lambda_handler(event,context):
             )
             body = json.loads(message.get('Body',None))
             if(body != None):
+                saveUserState(body)
                 cuisine = body.get('cuisine', None)
                 email = body.get('email', None)
                 hits = queryElasticSearch(cuisine)

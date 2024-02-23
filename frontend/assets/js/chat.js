@@ -1,11 +1,11 @@
 var checkout = {};
 
-$(document).ready(function() {
+$(document).ready(function () {
   var $messages = $('.messages-content'),
     d, h, m,
     i = 0;
 
-  $(window).load(function() {
+  $(window).load(function () {
     $messages.mCustomScrollbar();
     // insertResponseMessage('Hi there, I\'m your personal Concierge. How can I help?');
   });
@@ -33,15 +33,18 @@ $(document).ready(function() {
         unstructured: {
           text: message
         }
-      }]
+      }],
+      sessionId: $.cookie('sessionId')
     }, {});
   }
 
   function insertMessage() {
     msg = $('.message-input').val();
+    
     if ($.trim(msg) == '') {
       return false;
     }
+    
     $('<div class="message message-personal">' + msg + '</div>').appendTo($('.mCSB_container')).addClass('new');
     setDate();
     $('.message-input').val(null);
@@ -68,7 +71,7 @@ $(document).ready(function() {
 
               insertResponseMessage(message.structured.text);
 
-              setTimeout(function() {
+              setTimeout(function () {
                 html = '<img src="' + message.structured.payload.imageUrl + '" witdth="200" height="240" class="thumbnail" /><b>' +
                   message.structured.payload.name + '<br>$' +
                   message.structured.payload.price +
@@ -90,11 +93,11 @@ $(document).ready(function() {
       });
   }
 
-  $('.message-submit').click(function() {
+  $('.message-submit').click(function () {
     insertMessage();
   });
 
-  $(window).on('keydown', function(e) {
+  $(window).on('keydown', function (e) {
     if (e.which == 13) {
       insertMessage();
       return false;
@@ -105,7 +108,7 @@ $(document).ready(function() {
     $('<div class="message loading new"><figure class="avatar"><img src="https://media.tenor.com/images/4c347ea7198af12fd0a66790515f958f/tenor.gif" /></figure><span></span></div>').appendTo($('.mCSB_container'));
     updateScrollbar();
 
-    setTimeout(function() {
+    setTimeout(function () {
       $('.message.loading').remove();
       $('<div class="message new"><figure class="avatar"><img src="https://media.tenor.com/images/4c347ea7198af12fd0a66790515f958f/tenor.gif" /></figure>' + content + '</div>').appendTo($('.mCSB_container')).addClass('new');
       setDate();
@@ -114,4 +117,25 @@ $(document).ready(function() {
     }, 500);
   }
 
+});
+
+
+function makeid(length) {
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
+
+$(function () {
+  if (typeof $.cookie('sessionId') === 'undefined') {
+    sessionId = makeid(5);
+    $.cookie("sessionId", sessionId);
+  }
+  console.log("SessionID: " + $.cookie('sessionId') );
 });

@@ -119,13 +119,16 @@ def delegate(intent_name,session_attributes, slots):
             }
         } 
     
-def push_to_sqs(location, cuisine, dining_time, num_people, email):
+def push_to_sqs(location, cuisine, dining_time, num_people, email, sessionId):
     # connect to SQS
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName='dining-suggestion-queue')
+    sqs_client = boto3.client('sqs')
+
+    # SQS queue URL
+    queue_url = 'https://sqs.us-east-1.amazonaws.com/905418445552/dining-suggestion-queue'
 
     # create message body
     message_body = {
+        'sessionid': sessionId,
         'location': location,
         'cuisine': cuisine,
         'dining_time': dining_time,
@@ -134,7 +137,10 @@ def push_to_sqs(location, cuisine, dining_time, num_people, email):
     }
 
     # send message to SQS queue
-    queue.send_message(MessageBody=json.dumps(message_body))
+    sqs_client.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps(message_body),
+    )
     print(f"sent message {message_body} to SQS")
 
 def validate_dining_suggestion(location, cuisine, num_people, time, email):
@@ -202,23 +208,7 @@ def dining_suggestion_intent(intent_request):
     source = intent_request['invocationSource']
     
     confirmation = intent_request['interpretations'][0]['intent']['confirmationState']
-    if(location == None or cuisine == None or num_people == None or time == None or email == None or confirmation != "Confirmed"):
-        validation_result = validate_dining_suggestion(location, cuisine, num_people, time, email)   
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
-            return elicit_slot(intent_request['sessionState']['sessionAttributes'],
-                            intent_request['interpretations'][0]['intent']['name'],
-                            slots,
-                            validation_result['violatedSlot'],
-                            validation_result['message'])
-
-        if intent_request['sessionState']['sessionAttributes'] is not None:
-            output_session_attributes = intent_request['sessionState']['sessionAttributes']
-        else:
-            output_session_attributes = {}
-            
-        return delegate(intent_request['interpretations'][0]['intent']['name'],output_session_attributes, slots)
-    elif(confirmation == "Denied"):
+    if(confirmation == "Denied"):
         return {
                 "sessionState": {
                     "dialogAction": {
@@ -236,8 +226,26 @@ def dining_suggestion_intent(intent_request):
                     }
                 ]
             }
+    elif(location == None or cuisine == None or num_people == None or time == None or email == None or confirmation != "Confirmed"):
+        validation_result = validate_dining_suggestion(location, cuisine, num_people, time, email)   
+        if not validation_result['isValid']:
+            slots[validation_result['violatedSlot']] = None
+            return elicit_slot(intent_request['sessionState']['sessionAttributes'],
+                            intent_request['interpretations'][0]['intent']['name'],
+                            slots,
+                            validation_result['violatedSlot'],
+                            validation_result['message'])
+
+        if intent_request['sessionState']['sessionAttributes'] is not None:
+            output_session_attributes = intent_request['sessionState']['sessionAttributes']
+        else:
+            output_session_attributes = {}
+            
+        return delegate(intent_request['interpretations'][0]['intent']['name'],output_session_attributes, slots)
+    
     else:
-        push_to_sqs(location,cuisine, time, num_people, email)
+        sessionId = intent_request.get('sessionId')
+        push_to_sqs(location,cuisine, time, num_people, email, sessionId)
         return {"sessionState": {
                     "dialogAction": {
                         "type": "Close"
@@ -266,7 +274,7 @@ def dispatch(intent_request):
 def lambda_handler(event, context=[]):
     os.environ['TZ'] = 'America/New_York'
     time.tzset()
-    logger.debug('event.bot.name={}'.format(event['bot']['name']))
+    # logger.debug('event.bot.name={}'.format(event['bot']['name']))
     print(json.dumps(event))
     toRet = dispatch(event)
     print(json.dumps(toRet))
@@ -274,14 +282,15 @@ def lambda_handler(event, context=[]):
 
 
 # event = {
-#     "sessionId": "905418445552116",
-#     "inputTranscript": "aakar.mutha@nyu.edu",
+#     "inputMode": "Text",
+#     "sessionId": "X8xby",
+#     "inputTranscript": "yes",
 #     "interpretations": [
 #         {
 #             "interpretationSource": "Lex",
 #             "nluConfidence": 1,
 #             "intent": {
-#                 "confirmationState": "None",
+#                 "confirmationState": "Confirmed",
 #                 "name": "DiningSuggestionsIntent",
 #                 "slots": {
 #                     "Cuisine": {
@@ -297,31 +306,31 @@ def lambda_handler(event, context=[]):
 #                     "NumberOfPeople": {
 #                         "shape": "Scalar",
 #                         "value": {
-#                             "originalValue": "3",
+#                             "originalValue": "2",
 #                             "resolvedValues": [
-#                                 "3"
+#                                 "2"
 #                             ],
-#                             "interpretedValue": "3"
+#                             "interpretedValue": "4"
 #                         }
 #                     },
 #                     "DiningTime": {
 #                         "shape": "Scalar",
 #                         "value": {
-#                             "originalValue": "3pm",
+#                             "originalValue": "6pm",
 #                             "resolvedValues": [
-#                                 "15:00"
+#                                 "18:00"
 #                             ],
-#                             "interpretedValue": "15:00"
+#                             "interpretedValue": "18:00"
 #                         }
 #                     },
 #                     "email": {
 #                         "shape": "Scalar",
 #                         "value": {
-#                             "originalValue": "aakar.mutha@nyu.edu",
+#                             "originalValue": "am13480@nyu.edu",
 #                             "resolvedValues": [
-#                                 "aakar.mutha@nyu.edu"
+#                                 "am13480@nyu.edu"
 #                             ],
-#                             "interpretedValue": "aakar.mutha@nyu.edu"
+#                             "interpretedValue": "am13480@nyu.edu"
 #                         }
 #                     },
 #                     "Location": {
@@ -349,20 +358,20 @@ def lambda_handler(event, context=[]):
 #         },
 #         {
 #             "interpretationSource": "Lex",
-#             "nluConfidence": 0.44,
+#             "nluConfidence": 0.37,
 #             "intent": {
 #                 "confirmationState": "None",
-#                 "name": "ThankYouIntent",
+#                 "name": "GreetingIntent",
 #                 "slots": {},
 #                 "state": "InProgress"
 #             }
 #         },
 #         {
 #             "interpretationSource": "Lex",
-#             "nluConfidence": 0.24,
+#             "nluConfidence": 0.23,
 #             "intent": {
 #                 "confirmationState": "None",
-#                 "name": "GreetingIntent",
+#                 "name": "ThankYouIntent",
 #                 "slots": {},
 #                 "state": "InProgress"
 #             }
@@ -376,13 +385,402 @@ def lambda_handler(event, context=[]):
 #         "localeId": "en_US",
 #         "id": "V4X2CJY560"
 #     },
-#     "responseContentType": "text/plain; charset=utf-8",
 #     "sessionState": {
-#         "originatingRequestId": "8621aeb1-5a00-4f05-8242-1f94345f5d0d",
+#         "originatingRequestId": "9a0ce5f6-d10b-4289-8260-0cd4dc2b2c21",
 #         "sessionAttributes": {},
 #         "activeContexts": [],
 #         "intent": {
+#             "confirmationState": "Confirmed",
+#             "name": "DiningSuggestionsIntent",
+#             "slots": {
+#                 "Cuisine": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "indian",
+#                         "resolvedValues": [
+#                             "indian"
+#                         ],
+#                         "interpretedValue": "indian"
+#                     }
+#                 },
+#                 "NumberOfPeople": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "2",
+#                         "resolvedValues": [
+#                             "2"
+#                         ],
+#                         "interpretedValue": "2"
+#                     }
+#                 },
+#                 "DiningTime": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "6pm",
+#                         "resolvedValues": [
+#                             "18:00"
+#                         ],
+#                         "interpretedValue": "18:00"
+#                     }
+#                 },
+#                 "email": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "am13480@nyu.edu",
+#                         "resolvedValues": [
+#                             "am13480@nyu.edu"
+#                         ],
+#                         "interpretedValue": "am13480@nyu.edu"
+#                     }
+#                 },
+#                 "Location": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "new york",
+#                         "resolvedValues": [
+#                             "new york"
+#                         ],
+#                         "interpretedValue": "new york"
+#                     }
+#                 }
+#             },
+#             "state": "InProgress"
+#         }
+#     },
+#     "messageVersion": "1.0",
+#     "invocationSource": "DialogCodeHook",
+#     "responseContentType": "text/plain; charset=utf-8",
+#     "transcriptions": [
+#         {
+#             "resolvedContext": {
+#                 "intent": "DiningSuggestionsIntent"
+#             },
+#             "resolvedSlots": {},
+#             "transcriptionConfidence": 1,
+#             "transcription": "yes"
+#         }
+#     ]
+# }
+
+# event = {
+#     "sessionId": "X8xby",
+#     "inputTranscript": "no",
+#     "interpretations": [
+#         {
+#             "nluConfidence": 1,
+#             "intent": {
+#                 "confirmationState": "Denied",
+#                 "name": "DiningSuggestionsIntent",
+#                 "slots": {
+#                     "Cuisine": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "indian",
+#                             "resolvedValues": [
+#                                 "indian"
+#                             ],
+#                             "interpretedValue": "indian"
+#                         }
+#                     },
+#                     "NumberOfPeople": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "4",
+#                             "resolvedValues": [
+#                                 "4"
+#                             ],
+#                             "interpretedValue": "4"
+#                         }
+#                     },
+#                     "DiningTime": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "18:00",
+#                             "resolvedValues": [
+#                                 "18:00"
+#                             ],
+#                             "interpretedValue": "18:00"
+#                         }
+#                     },
+#                     "email": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "am13480@nyu.edu",
+#                             "resolvedValues": [
+#                                 "am13480@nyu.edu"
+#                             ],
+#                             "interpretedValue": "am13480@nyu.edu"
+#                         }
+#                     },
+#                     "Location": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "new york",
+#                             "resolvedValues": [
+#                                 "new york"
+#                             ],
+#                             "interpretedValue": "new york"
+#                         }
+#                     }
+#                 },
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "FallbackIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "nluConfidence": 0.5,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "ThankYouIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "nluConfidence": 0.48,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "GreetingIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         }
+#     ],
+#     "bot": {
+#         "aliasId": "TSTALIASID",
+#         "aliasName": "TestBotAlias",
+#         "name": "restaurantBot2",
+#         "version": "DRAFT",
+#         "localeId": "en_US",
+#         "id": "V4X2CJY560"
+#     },
+#     "responseContentType": "text/plain; charset=utf-8",
+#     "proposedNextState": {
+#         "prompt": {
+#             "attempt": "Initial"
+#         },
+#         "intent": {
 #             "confirmationState": "None",
+#             "name": "DiningSuggestionsIntent",
+#             "slots": {
+#                 "Cuisine": None,
+#                 "NumberOfPeople": None,
+#                 "DiningTime": None,
+#                 "email": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "am13480@nyu.edu",
+#                         "resolvedValues": [
+#                             "am13480@nyu.edu"
+#                         ],
+#                         "interpretedValue": "am13480@nyu.edu"
+#                     }
+#                 },
+#                 "Location": None
+#             },
+#             "state": "InProgress"
+#         },
+#         "dialogAction": {
+#             "slotToElicit": "Location",
+#             "type": "ElicitSlot"
+#         }
+#     },
+#     "sessionState": {
+#         "sessionAttributes": {},
+#         "intent": {
+#             "confirmationState": "Denied",
+#             "name": "DiningSuggestionsIntent",
+#             "slots": {
+#                 "Cuisine": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "indian",
+#                         "resolvedValues": [
+#                             "indian"
+#                         ],
+#                         "interpretedValue": "indian"
+#                     }
+#                 },
+#                 "NumberOfPeople": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "4",
+#                         "resolvedValues": [
+#                             "4"
+#                         ],
+#                         "interpretedValue": "4"
+#                     }
+#                 },
+#                 "DiningTime": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "18:00",
+#                         "resolvedValues": [
+#                             "18:00"
+#                         ],
+#                         "interpretedValue": "18:00"
+#                     }
+#                 },
+#                 "email": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "am13480@nyu.edu",
+#                         "resolvedValues": [
+#                             "am13480@nyu.edu"
+#                         ],
+#                         "interpretedValue": "am13480@nyu.edu"
+#                     }
+#                 },
+#                 "Location": {
+#                     "shape": "Scalar",
+#                     "value": {
+#                         "originalValue": "new york",
+#                         "resolvedValues": [
+#                             "new york"
+#                         ],
+#                         "interpretedValue": "new york"
+#                     }
+#                 }
+#             },
+#             "state": "InProgress"
+#         },
+#         "originatingRequestId": "ddaacdf5-4b4b-4bc9-a494-12cf6a3594ce"
+#     },
+#     "messageVersion": "1.0",
+#     "invocationSource": "DialogCodeHook",
+#     "transcriptions": [
+#         {
+#             "resolvedContext": {
+#                 "intent": "DiningSuggestionsIntent"
+#             },
+#             "transcriptionConfidence": 1,
+#             "transcription": "no",
+#             "resolvedSlots": {}
+#         }
+#     ],
+#     "inputMode": "Text"
+# }
+
+# event = {
+#     "sessionId": "NDmqk",
+#     "inputTranscript": "yes",
+#     "interpretations": [
+#         {
+#             "nluConfidence": 1,
+#             "intent": {
+#                 "confirmationState": "Confirmed",
+#                 "name": "DiningSuggestionsIntent",
+#                 "slots": {
+#                     "Cuisine": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "indian",
+#                             "resolvedValues": [
+#                                 "indian"
+#                             ],
+#                             "interpretedValue": "indian"
+#                         }
+#                     },
+#                     "NumberOfPeople": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "3",
+#                             "resolvedValues": [
+#                                 "3"
+#                             ],
+#                             "interpretedValue": "3"
+#                         }
+#                     },
+#                     "DiningTime": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "6pm",
+#                             "resolvedValues": [
+#                                 "18:00"
+#                             ],
+#                             "interpretedValue": "18:00"
+#                         }
+#                     },
+#                     "email": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "am13480@nyu.edu",
+#                             "resolvedValues": [
+#                                 "am13480@nyu.edu"
+#                             ],
+#                             "interpretedValue": "am13480@nyu.edu"
+#                         }
+#                     },
+#                     "Location": {
+#                         "shape": "Scalar",
+#                         "value": {
+#                             "originalValue": "new york",
+#                             "resolvedValues": [
+#                                 "new york"
+#                             ],
+#                             "interpretedValue": "new york"
+#                         }
+#                     }
+#                 },
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "FallbackIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "nluConfidence": 0.37,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "GreetingIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         },
+#         {
+#             "nluConfidence": 0.23,
+#             "intent": {
+#                 "confirmationState": "None",
+#                 "name": "ThankYouIntent",
+#                 "slots": {},
+#                 "state": "InProgress"
+#             },
+#             "interpretationSource": "Lex"
+#         }
+#     ],
+#     "bot": {
+#         "aliasId": "TSTALIASID",
+#         "aliasName": "TestBotAlias",
+#         "name": "restaurantBot2",
+#         "version": "DRAFT",
+#         "localeId": "en_US",
+#         "id": "V4X2CJY560"
+#     },
+#     "responseContentType": "text/plain; charset=utf-8",
+#     "sessionState": {
+#         "sessionAttributes": {},
+#         "activeContexts": [],
+#         "intent": {
+#             "confirmationState": "Confirmed",
 #             "name": "DiningSuggestionsIntent",
 #             "slots": {
 #                 "Cuisine": {
@@ -408,21 +806,21 @@ def lambda_handler(event, context=[]):
 #                 "DiningTime": {
 #                     "shape": "Scalar",
 #                     "value": {
-#                         "originalValue": "3pm",
+#                         "originalValue": "6pm",
 #                         "resolvedValues": [
-#                             "15:00"
+#                             "18:00"
 #                         ],
-#                         "interpretedValue": "15:00"
+#                         "interpretedValue": "18:00"
 #                     }
 #                 },
 #                 "email": {
 #                     "shape": "Scalar",
 #                     "value": {
-#                         "originalValue": "aakar.mutha@nyu.edu",
+#                         "originalValue": "am13480@nyu.edu",
 #                         "resolvedValues": [
-#                             "aakar.mutha@nyu.edu"
+#                             "am13480@nyu.edu"
 #                         ],
-#                         "interpretedValue": "aakar.mutha@nyu.edu"
+#                         "interpretedValue": "am13480@nyu.edu"
 #                     }
 #                 },
 #                 "Location": {
@@ -437,7 +835,8 @@ def lambda_handler(event, context=[]):
 #                 }
 #             },
 #             "state": "InProgress"
-#         }
+#         },
+#         "originatingRequestId": "3b20f674-ead1-46fc-89a5-7651db0aeefd"
 #     },
 #     "messageVersion": "1.0",
 #     "invocationSource": "DialogCodeHook",
@@ -446,22 +845,12 @@ def lambda_handler(event, context=[]):
 #             "resolvedContext": {
 #                 "intent": "DiningSuggestionsIntent"
 #             },
-#             "resolvedSlots": {
-#                 "email": {
-#                     "shape": "Scalar",
-#                     "value": {
-#                         "originalValue": "aakar.mutha@nyu.edu",
-#                         "resolvedValues": [
-#                             "aakar.mutha@nyu.edu"
-#                         ]
-#                     }
-#                 }
-#             },
+#             "resolvedSlots": {},
 #             "transcriptionConfidence": 1,
-#             "transcription": "aakar.mutha@nyu.edu"
+#             "transcription": "yes"
 #         }
 #     ],
 #     "inputMode": "Text"
 # }
 
-# print(lambda_handler(event))
+# lambda_handler(event)
