@@ -15,7 +15,7 @@ from decimal import Decimal
 import datetime
 
 
-API_KEY= "sJPrJJD964fvTBSmkhc2g6RurSuLaq5E9etCRy9ADy2BFrjHnFOV82PLmqKJsaLW3kSkvd0Ydg9nDFHCHUCAsrbumWepMbXFsYWguttwQPBsG-labQNIODbVUEvCZXYx"
+API_KEY= ""
 
 # API constants, you shouldn't have to change these.
 API_HOST = 'https://api.yelp.com'
